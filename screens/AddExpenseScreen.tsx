@@ -3,153 +3,114 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
     StyleSheet,
-    Alert,
+    TouchableOpacity,
     ScrollView,
-    Platform,
-    ActivityIndicator,
+    Alert,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { useExpenses } from '../context/ExpenseContext';
-import { validateExpense } from '../services/validationService';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const CATEGORIES = [
-    'Food & Dining',
+    'Food',
     'Transportation',
-    'Shopping',
     'Entertainment',
-    'Bills & Utilities',
+    'Utilities',
+    'Shopping',
     'Healthcare',
-    'Travel',
     'Education',
-    'Other'
-] as const;
+    'Other',
+];
 
-type Category = typeof CATEGORIES[number];
-
-interface FormData {
-    amount: string;
-    category: Category;
-    description: string;
-    date: string;
-}
-
-interface FormErrors {
-    amount?: string;
-    category?: string;
-    description?: string;
-    date?: string;
-}
-
-const AddExpenseScreen: React.FC = () => {
+const AddExpenseScreen = () => {
     const navigation = useNavigation();
-    const [formData, setFormData] = useState<FormData>({
-        amount: '',
-        category: CATEGORIES[0],
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-    });
-    const [errors, setErrors] = useState<FormErrors>({});
-    const [loading, setLoading] = useState(false);
-    const { createExpense } = useExpenses();
+    const { addExpense } = useExpenses();
+    const [amount, setAmount] = useState('');
+    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('');
 
     const handleSubmit = async () => {
-        const validation = validateExpense(formData);
-
-        if (!validation.isValid) {
-            setErrors(validation.errors);
+        if (!amount || !description || !category) {
+            Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
-        setLoading(true);
-        const result = await createExpense({
-            ...formData,
-            amount: parseFloat(formData.amount),
-            createdAt: new Date().toISOString(),
-        });
+        const numericAmount = parseFloat(amount);
+        if (isNaN(numericAmount) || numericAmount <= 0) {
+            Alert.alert('Error', 'Please enter a valid amount');
+            return;
+        }
 
-        setLoading(false);
-
-        if (result.success) {
-            Alert.alert('Success', 'Expense added successfully!', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
-        } else {
-            Alert.alert('Error', result.error);
+        try {
+            await addExpense({
+                amount: numericAmount,
+                description,
+                category,
+                date: new Date().toISOString(),
+            });
+            navigation.goBack();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to add expense');
         }
     };
 
     return (
         <ScrollView style={styles.container}>
             <View style={styles.form}>
-                <Text style={styles.title}>Add New Expense</Text>
-
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Amount ($)</Text>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Amount</Text>
                     <TextInput
-                        style={[styles.input, errors.amount && styles.inputError]}
-                        value={formData.amount}
-                        onChangeText={(text) => setFormData({ ...formData, amount: text })}
-                        placeholder="0.00"
+                        style={styles.input}
+                        value={amount}
+                        onChangeText={setAmount}
+                        placeholder="Enter amount"
                         keyboardType="decimal-pad"
+                        placeholderTextColor="#95a5a6"
                     />
-                    {errors.amount && <Text style={styles.errorText}>{errors.amount}</Text>}
                 </View>
 
-                <View style={styles.inputContainer}>
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Description</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder="Enter description"
+                        placeholderTextColor="#95a5a6"
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
                     <Text style={styles.label}>Category</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={formData.category}
-                            onValueChange={(value) => setFormData({ ...formData, category: value })}
-                            style={styles.picker}
-                        >
-                            {CATEGORIES.map((category) => (
-                                <Picker.Item key={category} label={category} value={category} />
-                            ))}
-                        </Picker>
+                    <View style={styles.categoryContainer}>
+                        {CATEGORIES.map((cat) => (
+                            <TouchableOpacity
+                                key={cat}
+                                style={[
+                                    styles.categoryButton,
+                                    category === cat && styles.categoryButtonSelected,
+                                ]}
+                                onPress={() => setCategory(cat)}
+                            >
+                                <Text
+                                    style={[
+                                        styles.categoryButtonText,
+                                        category === cat && styles.categoryButtonTextSelected,
+                                    ]}
+                                >
+                                    {cat}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
                 </View>
 
-                <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Description</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea, errors.description && styles.inputError]}
-                        value={formData.description}
-                        onChangeText={(text) => setFormData({ ...formData, description: text })}
-                        placeholder="Enter expense description"
-                        multiline
-                        numberOfLines={3}
-                    />
-                    {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-                </View>
-
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-                        onPress={handleSubmit}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <>
-                                <Ionicons name="checkmark-circle-outline" size={24} color="#fff" />
-                                <Text style={styles.submitButtonText}>Save Expense</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                    style={styles.submitButton}
+                    onPress={handleSubmit}
+                >
+                    <Text style={styles.submitButtonText}>Add Expense</Text>
+                </TouchableOpacity>
             </View>
         </ScrollView>
     );
@@ -161,15 +122,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8f9fa',
     },
     form: {
-        padding: 24,
+        padding: 16,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2c3e50',
-        marginBottom: 24,
-    },
-    inputContainer: {
+    inputGroup: {
         marginBottom: 20,
     },
     label: {
@@ -180,80 +135,49 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#e1e8ed',
-        borderRadius: 12,
-        padding: 16,
+        borderColor: '#e0e0e0',
         fontSize: 16,
-    },
-    textArea: {
-        height: 100,
-        textAlignVertical: 'top',
-    },
-    inputError: {
-        borderColor: '#e74c3c',
-        backgroundColor: '#fdf2f2',
-    },
-    errorText: {
-        color: '#e74c3c',
-        fontSize: 14,
-        marginTop: 6,
-    },
-    pickerContainer: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#e1e8ed',
-        borderRadius: 12,
-        overflow: 'hidden',
-    },
-    picker: {
-        height: 50,
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 24,
-    },
-    cancelButton: {
-        flex: 1,
-        marginRight: 12,
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e1e8ed',
-        alignItems: 'center',
-    },
-    cancelButtonText: {
         color: '#2c3e50',
-        fontSize: 16,
-        fontWeight: '600',
+    },
+    categoryContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginHorizontal: -4,
+    },
+    categoryButton: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        margin: 4,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    categoryButtonSelected: {
+        backgroundColor: '#27ae60',
+        borderColor: '#27ae60',
+    },
+    categoryButtonText: {
+        color: '#2c3e50',
+        fontSize: 14,
+    },
+    categoryButtonTextSelected: {
+        color: '#fff',
     },
     submitButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        borderRadius: 12,
         backgroundColor: '#27ae60',
-        flex: 1,
-        marginLeft: 12,
-        shadowColor: '#27ae60',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    submitButtonDisabled: {
-        opacity: 0.7,
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 20,
     },
     submitButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
-        marginLeft: 8,
     },
 });
 

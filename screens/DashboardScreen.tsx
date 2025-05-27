@@ -14,11 +14,20 @@ import {
     Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useExpenses } from '../context/ExpenseContext';
 import { useAuth } from '../context/AuthContext';
 import { useBudget } from '../context/BudgetContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
+import { MainTabParamList, ExpensesStackParamList } from '../navigation/AppNavigator';
+
+type NavigationProp = CompositeNavigationProp<
+    BottomTabNavigationProp<MainTabParamList, 'Dashboard'>,
+    NativeStackNavigationProp<ExpensesStackParamList>
+>;
 
 interface Expense {
     id: string;
@@ -40,7 +49,7 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32;
 
 const DashboardScreen: React.FC = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<NavigationProp>();
     const { expenses, fetchExpenses, loading } = useExpenses();
     const { user } = useAuth();
     const { monthlyBudget, setMonthlyBudget, remainingBudget, spendingPercentage } = useBudget();
@@ -96,14 +105,14 @@ const DashboardScreen: React.FC = () => {
     };
 
     const expenseStats = useMemo<ExpenseStats>(() => {
-        const total = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-        const thisMonth = expenses.filter(expense => {
+        const total = expenses.reduce((sum: number, expense: Expense) => sum + Number(expense.amount || 0), 0);
+        const thisMonth = expenses.filter((expense: Expense) => {
             const expenseDate = new Date(expense.date || expense.createdAt);
             const now = new Date();
             return expenseDate.getMonth() === now.getMonth() &&
                 expenseDate.getFullYear() === now.getFullYear();
         });
-        const monthlyTotal = thisMonth.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+        const monthlyTotal = thisMonth.reduce((sum: number, expense: Expense) => sum + Number(expense.amount || 0), 0);
 
         return {
             total,
@@ -196,7 +205,7 @@ const DashboardScreen: React.FC = () => {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Recent Expenses</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Expenses')}>
+                        <TouchableOpacity onPress={() => navigation.navigate('ExpensesTab', { screen: 'ExpensesList' })}>
                             <Text style={styles.seeAllText}>See All</Text>
                         </TouchableOpacity>
                     </View>
@@ -204,7 +213,10 @@ const DashboardScreen: React.FC = () => {
                         <TouchableOpacity
                             key={expense.id}
                             style={styles.expenseItem}
-                            onPress={() => navigation.navigate('ExpenseDetail', { expenseId: expense.id })}
+                            onPress={() => navigation.navigate('ExpensesTab', {
+                                screen: 'ExpenseDetail',
+                                params: { expenseId: expense.id }
+                            })}
                         >
                             <View style={styles.expenseInfo}>
                                 <Text style={styles.expenseDescription}>{expense.description}</Text>
@@ -222,7 +234,9 @@ const DashboardScreen: React.FC = () => {
 
                 <TouchableOpacity
                     style={styles.addButton}
-                    onPress={() => navigation.navigate('AddExpense')}
+                    onPress={() => navigation.navigate('ExpensesTab', {
+                        screen: 'AddExpense'
+                    })}
                 >
                     <Text style={styles.addButtonText}>+ Add New Expense</Text>
                 </TouchableOpacity>

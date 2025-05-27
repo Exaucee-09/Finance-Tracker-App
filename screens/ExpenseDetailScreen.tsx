@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     Alert,
-    ActivityIndicator,
     ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useExpenses } from '../context/ExpenseContext';
 
 interface Expense {
@@ -16,7 +16,7 @@ interface Expense {
     amount: number;
     description: string;
     category: string;
-    date?: string;
+    date: string;
     createdAt: string;
 }
 
@@ -24,139 +24,80 @@ type RootStackParamList = {
     ExpenseDetail: { expenseId: string };
 };
 
-type ExpenseDetailScreenRouteProp = RouteProp<RootStackParamList, 'ExpenseDetail'>;
+type ExpenseDetailRouteProp = RouteProp<RootStackParamList, 'ExpenseDetail'>;
 
-const ExpenseDetailScreen: React.FC = () => {
+const ExpenseDetailScreen = () => {
     const navigation = useNavigation();
-    const route = useRoute<ExpenseDetailScreenRouteProp>();
+    const route = useRoute<ExpenseDetailRouteProp>();
+    const { expenses, deleteExpense } = useExpenses();
     const { expenseId } = route.params;
-    const [expense, setExpense] = useState<Expense | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [deleting, setDeleting] = useState(false);
-    const { getExpenseById, deleteExpense } = useExpenses();
 
-    useEffect(() => {
-        loadExpenseDetail();
-    }, [expenseId]);
-
-    const loadExpenseDetail = async () => {
-        setLoading(true);
-        try {
-            const result = await getExpenseById(expenseId);
-            if (result.success) {
-                setExpense(result.data);
-            } else {
-                Alert.alert('Error', 'Failed to load expense details');
-                navigation.goBack();
-            }
-        } catch (error) {
-            Alert.alert('Error', 'An unexpected error occurred');
-            navigation.goBack();
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDelete = () => {
-        Alert.alert(
-            'Delete Expense',
-            'Are you sure you want to delete this expense? This action cannot be undone.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: confirmDelete,
-                },
-            ]
-        );
-    };
-
-    const confirmDelete = async () => {
-        setDeleting(true);
-        try {
-            const result = await deleteExpense(expenseId);
-            if (result.success) {
-                Alert.alert('Success', 'Expense deleted successfully!', [
-                    { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
-            } else {
-                Alert.alert('Error', result.error || 'Failed to delete expense');
-            }
-        } catch (error) {
-            Alert.alert('Error', 'An unexpected error occurred while deleting');
-        } finally {
-            setDeleting(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#27ae60" />
-                <Text style={styles.loadingText}>Loading expense details...</Text>
-            </View>
-        );
-    }
+    const expense = expenses.find((exp: Expense) => exp.id === expenseId);
 
     if (!expense) {
         return (
-            <View style={styles.errorContainer}>
+            <View style={styles.container}>
                 <Text style={styles.errorText}>Expense not found</Text>
             </View>
         );
     }
 
+    const handleDelete = () => {
+        Alert.alert(
+            'Delete Expense',
+            'Are you sure you want to delete this expense?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await deleteExpense(expenseId);
+                        navigation.goBack();
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.amount}>${expense.amount.toFixed(2)}</Text>
-                <Text style={styles.category}>{expense.category}</Text>
-            </View>
-
-            <View style={styles.details}>
-                <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Description</Text>
-                    <Text style={styles.detailValue}>{expense.description}</Text>
+            <View style={styles.card}>
+                <View style={styles.amountContainer}>
+                    <Text style={styles.amountLabel}>Amount</Text>
+                    <Text style={styles.amount}>${expense.amount.toFixed(2)}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Date</Text>
-                    <Text style={styles.detailValue}>
-                        {new Date(expense.date || expense.createdAt).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        })}
+                    <Text style={styles.label}>Description</Text>
+                    <Text style={styles.value}>{expense.description}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                    <Text style={styles.label}>Category</Text>
+                    <Text style={styles.value}>{expense.category}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                    <Text style={styles.label}>Date</Text>
+                    <Text style={styles.value}>
+                        {new Date(expense.date).toLocaleDateString()}
                     </Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Created</Text>
-                    <Text style={styles.detailValue}>
-                        {new Date(expense.createdAt).toLocaleString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
+                    <Text style={styles.label}>Created</Text>
+                    <Text style={styles.value}>
+                        {new Date(expense.createdAt).toLocaleDateString()}
                     </Text>
                 </View>
-            </View>
 
-            <View style={styles.actions}>
-                <TouchableOpacity 
-                    style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]} 
+                <TouchableOpacity
+                    style={styles.deleteButton}
                     onPress={handleDelete}
-                    disabled={deleting}
                 >
-                    {deleting ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.deleteButtonText}>Delete Expense</Text>
-                    )}
+                    <Ionicons name="trash-outline" size={20} color="#fff" />
+                    <Text style={styles.deleteButtonText}>Delete Expense</Text>
                 </TouchableOpacity>
             </View>
         </ScrollView>
@@ -168,98 +109,69 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f8f9fa',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8f9fa',
+    card: {
+        backgroundColor: '#fff',
+        margin: 16,
+        padding: 20,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
-    loadingText: {
-        marginTop: 16,
+    amountContainer: {
+        alignItems: 'center',
+        marginBottom: 24,
+        paddingBottom: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    amountLabel: {
         fontSize: 16,
         color: '#7f8c8d',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-    },
-    errorText: {
-        fontSize: 18,
-        color: '#e74c3c',
-        fontWeight: '600',
-    },
-    header: {
-        backgroundColor: '#fff',
-        padding: 24,
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e1e8ed',
+        marginBottom: 8,
     },
     amount: {
         fontSize: 36,
         fontWeight: 'bold',
         color: '#27ae60',
-        marginBottom: 8,
-    },
-    category: {
-        fontSize: 18,
-        color: '#7f8c8d',
-        fontWeight: '500',
-    },
-    details: {
-        backgroundColor: '#fff',
-        margin: 16,
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
     },
     detailRow: {
         marginBottom: 16,
     },
-    detailLabel: {
+    label: {
         fontSize: 14,
         color: '#7f8c8d',
         marginBottom: 4,
-        fontWeight: '500',
     },
-    detailValue: {
+    value: {
         fontSize: 16,
         color: '#2c3e50',
-        fontWeight: '500',
-    },
-    actions: {
-        padding: 16,
     },
     deleteButton: {
         backgroundColor: '#e74c3c',
-        padding: 16,
-        borderRadius: 16,
+        flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    deleteButtonDisabled: {
-        backgroundColor: '#bdc3c7',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 8,
+        marginTop: 24,
     },
     deleteButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+        marginLeft: 8,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#e74c3c',
+        textAlign: 'center',
+        marginTop: 24,
     },
 });
 
