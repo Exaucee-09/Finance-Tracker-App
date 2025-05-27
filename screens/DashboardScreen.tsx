@@ -205,7 +205,11 @@ const DashboardScreen: React.FC = () => {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>Recent Expenses</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('ExpensesTab', { screen: 'ExpensesList' })}>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('ExpensesTab', {
+                                screen: 'ExpensesList'
+                            })}
+                        >
                             <Text style={styles.seeAllText}>See All</Text>
                         </TouchableOpacity>
                     </View>

@@ -224,8 +224,9 @@ const styles = StyleSheet.create({
     },
     errorText: {
         color: '#e74c3c',
-        marginLeft: 8,
         fontSize: 14,
+        marginLeft: 8,
+        marginTop: 6,
     },
     loginButton: {
         backgroundColor: '#27ae60',
@@ -278,12 +279,6 @@ const styles = StyleSheet.create({
     inputError: {
         borderColor: '#e74c3c',
         backgroundColor: '#fdf2f2',
-    },
-    errorText: {
-        color: '#e74c3c',
-        fontSize: 14,
-        marginTop: 6,
-        marginLeft: 8,
     },
 });
 

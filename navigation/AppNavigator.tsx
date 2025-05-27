@@ -59,6 +59,7 @@ const LogoutButton = () => {
 const ExpensesStackNavigator = () => {
     return (
         <ExpensesStack.Navigator
+            initialRouteName="ExpensesList"
             screenOptions={{
                 headerStyle: {
                     backgroundColor: '#fff',

@@ -15,12 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useExpenses } from '../context/ExpenseContext';
 import { Ionicons } from '@expo/vector-icons';
-
-type ExpensesStackParamList = {
-    ExpensesList: undefined;
-    ExpenseDetail: { expenseId: string };
-    AddExpense: undefined;
-};
+import { ExpensesStackParamList } from '../navigation/AppNavigator';
 
 type NavigationProp = NativeStackNavigationProp<ExpensesStackParamList>;
 
@@ -37,7 +32,11 @@ const ExpensesScreen = () => {
     const navigation = useNavigation<NavigationProp>();
     const { expenses, deleteExpense, fetchExpenses, loading } = useExpenses();
     const [searchQuery, setSearchQuery] = useState('');
-    const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>(expenses);
+    const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
+
+    useEffect(() => {
+        fetchExpenses();
+    }, []);
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
